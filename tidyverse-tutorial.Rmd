@@ -8,17 +8,32 @@ output:
     toc_depth: 3
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
 # Objectives
 
 1. Learn to use *dplyr* for data manipulation
 2. Use *ggplot2* to make graphs and plots
 3. Make reproducible HTML/PDF reports with R
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+# *tidyverse*
+
+* A collection of R packages designed for data science
+* Some commonly used sub-packages: 
+    * ggplot2: for creating pretty graphics
+    * dplyr: for easy data manipulation
+    * tidyr: for easy conversion between different data formats (e.g., wide and long)
+* Resources
+    * Online free book: [R for Data Science](https://r4ds.had.co.nz/)
+    * Cheatsheets ([ggplot2](https://github.com/rstudio/cheatsheets/blob/main/data-visualization-2.1.pdf), [dplyr](https://github.com/rstudio/cheatsheets/blob/main/data-transformation.pdf), [tidyr](https://github.com/rstudio/cheatsheets/blob/main/tidyr.pdf))
+
+```{r}
 # install.packages("tidyverse")
 library(tidyverse)
 ```
+
 
 # Data
 
