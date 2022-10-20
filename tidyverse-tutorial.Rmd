@@ -153,7 +153,7 @@ names(bacs_sub)
 
 ```{r}
 # bring the demographic variables to the front
-bacs_sub %>%
+bacs_sub2 <- bacs %>%
   select(Gender, Age, Ethnic, everything())
 names(bacs_sub2)
 ```
@@ -276,6 +276,8 @@ bacs_sum %>%
   select(big5_sum, bacs_sum) %>%
   head()
 ```
+
+
 ## Scatter plot: `geom_point()`
 
 ```{r}

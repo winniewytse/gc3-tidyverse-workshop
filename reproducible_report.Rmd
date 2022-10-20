@@ -46,10 +46,12 @@ I highly recommend saving the wrangled data frame into a new object and keep a c
 # good practice
 bacs_sub <- bacs %>%
   select(Gender, Age)
+names(bacs_sub)
 # oh I forgot to include Ethnic
 # let's start again from bacs which contains all variables
 bacs_sub <- bacs %>%
   select(Gender, Age, Ethnic)
+names(bacs_sub)
 ```
 
 ```{r eval=FALSE}
@@ -80,7 +82,7 @@ bacs_sum <- bacs %>%
 (bacs_mean <- mean(bacs_sum$bacs_sum))
 ```
 
-We should avoid hard coding by typing the number 44.72, but instead use "`r bacs_mean`" to print the result. 
+We should avoid hard coding by typing the number 44.72, but instead use "`r bacs_mean`" to print the result, mean of BACS = `r bacs_mean`. 
 
 \newpage
 
@@ -131,8 +133,8 @@ bacs_test <- bacs
 
 If a code chunk produces an error, R will stop knitting the entire document. It's best to fix the bugs and resolve the errors. But sometimes if we want to force R to knit a document even if there an error, use the chunk option `error=TRUE`
 
-```{r error=TRUE}
-# as the above chunk wasn't evalauted, 
+```{r}
+# as the above chunk wasn't evaluated, 
 # bacs_test does not exist
 bacs_test
 ```
