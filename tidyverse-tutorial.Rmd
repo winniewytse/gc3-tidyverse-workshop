@@ -1,0 +1,417 @@
+---
+title: "GC3 Workshop: Data Wrangling and Visualization (Tutorial)"
+author: "Winnie Wing-Yee Tse"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+    toc: TRUE
+    toc_depth: 3
+---
+
+# Objectives
+
+1. Learn to use *dplyr* for data manipulation
+2. Use *ggplot2* to make graphs and plots
+3. Make reproducible HTML/PDF reports with R
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# install.packages("tidyverse")
+library(tidyverse)
+```
+
+# Data
+
+We will use two datasets in the following demonstrations (a) sleep, a built-in dataset in R, and (b) beliefs about crying scale, which is available on OSF. Typically in R, a column of a data frame indicates a variable (e.g., `group`, `ID`), and a row contains the data for one observation.
+
+```{r}
+# dataset 1: sleep (built in R)
+data(sleep) # ?sleep for more details
+# dataset 2: beliefs about crying scale
+bacs <- read.csv("https://osf.io/6gsy8/download")
+```
+
+* Quick tip: as a sanity check, I always use `names()` or `colnames()` to have a quick glance of the names of all variables in a data frame
+
+```{r}
+names(bacs)
+```
+
+
+
+# Data Manipulation
+
+The pipe operator, `%>%` (under the *magrittr* and *dplyr* package), allows us to pass the result of a function to another function in sequence. 
+
+* Example: use the base R function `subset()` to select the data of group 1 and then select the data of the person with ID 1
+
+```{r}
+# without piping
+subset(subset(sleep, group == 1), ID == 1)
+
+# with piping
+subset(sleep, group == 1) %>%
+  subset(ID == 1)
+```
+
+The above is just a simple example for illustration. Without piping, we can use `subset(sleep, group == 1 & ID == 1)` to achieve the same purpose. 
+
+
+## Manipulate cases
+
+### `filter()`: retains all rows that satisfy your conditions
+
+```{r}
+# retain all observations in group 1
+sleep %>%
+  filter(group == 1)
+# retain all observations that had a decrease in hours of sleep 
+# (i.e., `extra < 0`)
+sleep %>%
+  filter(extra < 0)
+# retain all observations in group 1 that had a decrease in hours of sleep
+sleep %>%
+  filter(group == 1, extra < 0)
+# exclude all observations in group 2 
+sleep %>%
+  filter(!group == 2)
+```
+
+
+### `arrange()`: order the rows by the values of selected columns
+
+```{r}
+# sort the data by group in ascending order
+sleep %>%
+  arrange(group)
+# sort the data by group in descending order
+sleep %>%
+  arrange(desc(group))
+# sort the data by group then by the descending order of ID
+sleep %>%
+  arrange(group, desc(ID))
+```
+
+### `add_row()`: add one or more rows of data to an existing data frame
+
+```{r}
+# add two observations
+# (1) ID = 11, group = 2, extra = 0
+# (2) ID = 12, group = 2, extra = 1
+sleep %>%
+  add_row(extra = c(0, 1), 
+          group = as.factor(c(2, 2)), 
+          ID = as.factor(c(11, 12)))
+```
+
+Why do we need `as_factor()`? Read "Debugging tips" for more details. 
+
+## Manipulate variables
+
+### `select()`: select variables in a data frame
+
+* It also allows you to order the variables (columns)
+
+```{r}
+# select ID and extra
+sleep %>%
+  select(ID, extra)
+# exclude group and ID
+sleep %>%
+  select(!c(group, ID))
+# reorder the variables: ID, group, extra
+sleep %>%
+  select(ID, group, extra)
+```
+
+* `contains()`: select variables that match a pattern
+
+```{r}
+# select all big 5 questions from bacs and demographic variables
+# save the data subset to bacs_sub
+bacs_sub <- bacs %>%
+  select(contains("BigV"), Gender, Age, Ethnic)
+names(bacs_sub)
+```
+
+* `everything()`: select all variables -- save you time from copying and pasting!
+
+```{r}
+# bring the demographic variables to the front
+bacs_sub %>%
+  select(Gender, Age, Ethnic, everything())
+names(bacs_sub2)
+```
+
+### `mutate()`: create and modify columns
+
+```{r}
+# create a new column that standardizes `extra`
+sleep_std <- sleep %>%
+  mutate(extra_std = (extra - mean(extra)) / sd(extra))
+# check the mean and sd of the standardized variable
+mean(sleep_std$extra_std)
+sd(sleep_std$extra_std)
+```
+
+```{r}
+# dichotomous `extra`
+# assign 1 to extra >= 0 and 0 to extra < 0
+sleep %>%
+  mutate(extra_bin = ifelse(extra >= 0, 1, 0))
+```
+
+```{r}
+# replace the original column with the standardized estimates
+# ** not recommended **
+sleep %>%
+  mutate(extra = (extra - mean(extra)) / sd(extra))
+```
+
+
+## rename(): change the names of individual variables 
+
+* `new_name = old_name` (don't worry--I'm always confused with the order and have got plenty of error messages because of putting an incorrect order)
+
+```{r}
+sleep %>%
+  rename(ID_new = ID)
+```
+
+## Handle NA's
+
+### `drop_na()`: drop rows where any specified column contains NA
+
+```{r}
+# create observations in the sleep data
+sleep_NA <- sleep %>%
+  add_row(extra = c(NA, 1, -1), 
+          group = as.factor(c(2, NA, 1)), 
+          ID = as.factor(c(13, 14, 15)))
+# drop_na will drop ID 13 and 14 but not 15
+sleep_NA %>%
+  drop_na()
+# drop_na(extra) will drop ID 13 only
+sleep_NA %>%
+  drop_na(extra)
+```
+
+### `replace_na()`: replace NAs with specified values
+
+```{r}
+sleep_NA %>%
+  mutate(extra = replace_na(extra, 999))
+```
+
+### `na_if()`: convert a value to NA
+
+* I find this function particularly useful for datasets from SPSS, Mplus, Stata, etc., which have a convention of indicating missing values with 999, 9999, or some other numeric values. 
+
+```{r}
+sleep_999 <- sleep %>%
+  add_row(extra = c(999, 1, -1), 
+          group = as.factor(c(2, 999, 1)), 
+          ID = as.factor(c(13, 14, 15)))
+sleep_999 %>%
+  na_if(999)
+```
+
+# Combine tables: `left_join()`, `right_join()`, `replace_na()`, `na_if()`
+
+```{r}
+band_members
+band_instruments
+```
+
+```{r}
+# inner_join (include all rows in x AND y)
+band_members %>%
+  inner_join(band_instruments, by = "name")
+# full_join (include all rows in x OR y)
+band_members %>%
+  full_join(band_instruments, by = "name")
+# left_join (include all rows in x)
+band_members %>%
+  left_join(band_instruments, by = "name")
+# right_join (include all rows in y)
+band_members %>%
+  right_join(band_instruments, by = "name")
+```
+
+
+\newpage
+
+# Data Visualization
+
+Let's wrangle the data a little bit before plotting. Below are two specific tasks. 
+
+1. Create two new variables---the individual sum score of the responses to big five inventory (43 questions) and that of the responses to beliefs about crying scale (14 questions).
+2. Recode Gender from 1, 2 to male and female, respectively
+3. Dichotomous Age by the median of it (`median(bacs$Age)` is 19)
+
+```{r}
+bacs_sum <- bacs %>%
+  # calculate the sum score per individual
+  mutate(big5_sum = rowSums(across(contains("BigV"))), 
+         bacs_sum = rowSums(across(contains("BACS"))), 
+         gender = recode(Gender, `1` = "Male", `2` = "Feamle"), 
+         age_bin = ifelse(Age >= 19, "Older than or at age 19", 
+                          "Younger than age 19"))
+bacs_sum %>%
+  select(big5_sum, bacs_sum) %>%
+  head()
+```
+## Scatter plot: `geom_point()`
+
+```{r}
+bacs_sum %>%
+  ggplot(aes(x = big5_sum, y = bacs_sum)) + 
+  geom_point()
+```
+
+## Adding a regression line: `geom_smooth()`
+
+```{r}
+bacs_sum %>%
+  ggplot(aes(x = big5_sum, y = bacs_sum)) + 
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+## Changing Aesthetics
+
+* Under `geom_point()`
+    * `size` controls the size of the points
+    * `alpha` controls the transparency of the points
+    * `col` controls the color of the points
+    * `shape` controls the shape of the points
+* Under `geom_smooth()`
+    * `size` controls the thickness of the line
+    * `alpha` controls the transparency of uncertainty area
+    * `col` controls the color of the line
+    * `linetype` controls the shape of the points
+* `labs()`: label of the axes and the title
+* `theme_bw()`: one of the preset themes in ggplot2
+
+```{r}
+(big5_bacs <- bacs_sum %>%
+  ggplot(aes(x = big5_sum, y = bacs_sum)) + 
+  geom_point(size = 1, alpha = .5, col = "blue", shape = 2) +
+  geom_smooth(method = "lm", size = .5, alpha = .4, 
+              col = "red", linetype = "longdash") +
+  labs(x = "Big Five Personality", y = "Beliefs About Crying", 
+       title = "Correlation between Big Five Personality and Beliefs About Crying") + 
+  theme_bw())
+```
+
+## Export the figure: `ggsave()`
+
+* This function is one of my personal favorites.  
+
+```{r eval=FALSE}
+ggsave("big5_bacs.png", big5_bacs, 
+       width = 2000, height = 1600, units = "px")
+```
+
+
+## Aesthetics by groups
+
+```{r}
+# colors by groups
+bacs_sum %>%
+  ggplot(aes(x = big5_sum, y = bacs_sum, col = gender)) + 
+  geom_point(size = .5) +
+  geom_smooth(method = "lm", size = 1, alpha = .2) +
+  labs(x = "Big Five Personality", y = "Beliefs About Crying", 
+       title = "Correlation between Big Five Personality and Beliefs About Crying", 
+       col = "Gender") + 
+  theme_bw()
+```
+
+```{r}
+# shapes and linetypes by groups
+bacs_sum %>%
+  ggplot(aes(x = big5_sum, y = bacs_sum, col = gender)) + 
+  geom_point(size = 1, alpha = .7, aes(shape = gender)) +
+  geom_smooth(method = "lm", size = 1, alpha = .2, 
+              aes(linetype = gender)) +
+  labs(x = "Big Five Personality", y = "Beliefs About Crying", 
+       title = "Correlation between Big Five Personality and Beliefs About Crying", 
+       col = "Gender", shape = "Gender", linetype = "Gender") + 
+  theme_bw()
+```
+
+
+## Grid of panels: `facet_grid()`
+
+```{r}
+(bacs_sum %>%
+  ggplot(aes(x = big5_sum, y = bacs_sum)) + 
+  geom_point(size = 1, alpha = .5, col = "blue", shape = 2) +
+  geom_smooth(method = "lm", size = .5, alpha = .4, 
+              col = "red", linetype = "longdash") +
+  facet_grid(~ gender) + 
+  labs(x = "Big Five Personality", y = "Beliefs About Crying", 
+       title = "Correlation between Big Five Personality and Beliefs About Crying") + 
+  theme_bw())
+```
+
+```{r}
+(bacs_sum %>%
+  ggplot(aes(x = big5_sum, y = bacs_sum)) + 
+  geom_point(size = 1, alpha = .5, col = "blue", shape = 2) +
+  geom_smooth(method = "lm", size = .5, alpha = .4, 
+              col = "red", linetype = "longdash") +
+  facet_grid(gender ~ age_bin) + 
+  labs(x = "Big Five Personality", y = "Beliefs About Crying", 
+       title = "Correlation between Big Five Personality and Beliefs About Crying") + 
+  theme_bw())
+```
+
+## Histograms: `geom_histogram()`
+
+```{r}
+bacs_sum %>%
+  ggplot(aes(x = big5_sum)) + 
+  geom_histogram(binwidth = 1.5, col = "black", fill = "white", 
+                 size = .3) +
+  labs(x = "Sum Scores of Big Five Personality", 
+       y = "Frequency", 
+       title = "Distribution of Sum Score of Big Five Personality")
+```
+
+
+
+# Debugging tips
+
+1. Read the error message. *tidyverse* usually prints out an informative message that points you to the issue. If more help is needed, copy and paste the key message to google and you should be able to find relevant discussions. 
+
+Example: `add_row()`
+    
+```{r error=TRUE}
+sleep %>%
+  add_row(extra = 0, group = 2, ID = 11)
+```
+
+The error message tells us that R cannot combine something that is a factor with another thing that is a double. 
+
+2. The class of an R object matters. When there is a bug with data manipulation, the first thing I always do is to check what the class of a variable is using `class()` or `str()`. 
+
+```{r}
+str(sleep)
+class(2)
+```
+
+Structure tells us that `group` and `ID` have the class `factor`, but when we assign a value of `group = 2`, the "2" there has a class of `numeric`. The error tells us that R cannot combine a numeric value to a column that is defined as factor. The solution is to either change the class of the column or change the class of the new values. 
+
+```{r}
+# solution 1
+sleep %>%
+  add_row(extra = 0, group = as.factor(2), ID = as.factor(11))
+# solution 2
+sleep %>%
+  mutate_all(as.numeric) %>% # coerce all variables into numeric
+  add_row(extra = 0, group = 2, ID = 11)
+```
+
+

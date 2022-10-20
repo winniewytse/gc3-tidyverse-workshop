@@ -1,0 +1,22 @@
+---
+title: "GC3 Workshop: Data Wrangling and Visualization (Practice)"
+author: "Winnie Wing-Yee Tse"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+library(tidyverse)
+bacs <- read.csv("https://osf.io/6gsy8/download")
+```
+
+Data wrangling tasks: 
+
+1. Recode `Ethnic`: 1 = "White", 2 = "Other", 4 = "Asian", 6 = "African/African-American"
+2. Exclude the observation(s) for "Other"
+3. Include the observations for Age < 25
+4. Calculate the sum score of CPS and EES scales for each individual
+5. Calculate the mean of the CPS sum scores for each ethnic group and report them in a statement (keep your report reproducible)
+6. Make scatterplots of CSP sum scores against EES sum scores, separated by ethnic groups (presenting any aesthetics by groups or facetting works)
+
+Alternatively, work on any relevant tasks for your own dataset. We are here to help if you have any questions :) 
