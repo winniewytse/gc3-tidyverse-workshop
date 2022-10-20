@@ -133,7 +133,7 @@ bacs_test <- bacs
 
 If a code chunk produces an error, R will stop knitting the entire document. It's best to fix the bugs and resolve the errors. But sometimes if we want to force R to knit a document even if there an error, use the chunk option `error=TRUE`
 
-```{r}
+```{r error=TRUE}
 # as the above chunk wasn't evaluated, 
 # bacs_test does not exist
 bacs_test
